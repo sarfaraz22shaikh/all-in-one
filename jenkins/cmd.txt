@@ -1,0 +1,323 @@
+# ===== PULL AND RUN NGINX =====
+docker pull nginx
+docker run -d nginx
+docker run -d --name mynginx nginx
+docker ps
+docker stop mynginx
+docker rm mynginx
+docker ps -a
+
+# ===== IMAGE COMMANDS =====
+docker pull alpine
+docker images
+docker image ls
+docker inspect alpine
+docker rmi alpine
+docker rmi -f alpine
+
+docker ps -a
+docker stop container_name
+docker rm container_name
+docker rmi image_name
+
+# ===== INTERACTIVE UBUNTU CONTAINER =====
+docker pull ubuntu
+docker run -it --name ubuntu_container ubuntu bash
+# inside:
+pwd
+ls
+ls -la
+whoami
+cat /etc/os-release
+exit
+
+docker ps -a
+docker start ubuntu_container
+docker exec -it ubuntu_container bash
+docker stop ubuntu_container
+docker rm ubuntu_container
+
+# ===== NAMING / RENAMING =====
+docker run -d --name web_server nginx
+docker ps
+docker stop web_server
+docker rename web_server my_server
+docker ps -a
+docker rm my_server
+
+# ===== TAGGING =====
+docker pull nginx
+docker tag nginx mynginx:v1
+docker tag nginx mynginx:latest
+docker images
+docker image inspect mynginx:v1
+docker image inspect mynginx:latest
+docker rmi mynginx:v1
+docker images
+
+# ===== PUSH TO DOCKER HUB =====
+docker login
+docker pull nginx
+docker tag nginx YOUR_USERNAME/mynginx:v1
+docker push YOUR_USERNAME/mynginx:v1
+docker logout
+
+# ===== NETWORKING / PORT MAPPING =====
+docker run -d --name nginx_server -p 8080:80 nginx
+# open http://localhost:8080
+docker network ls
+docker network inspect bridge
+docker inspect nginx_server
+docker stop nginx_server
+docker rm nginx_server
+
+
+# ===== VOLUMES =====
+docker volume create data_vol
+docker volume ls
+docker volume inspect data_vol
+docker run -it --name volume_container -v data_vol:/data ubuntu bash
+# inside:
+cd /data
+echo "Docker volume persistence test" > test.txt
+cat test.txt
+exit
+
+docker rm volume_container
+docker run -it --name new_volume_container -v data_vol:/data ubuntu bash
+# inside:
+cd /data
+ls
+cat test.txt
+exit
+
+docker rm new_volume_container
+docker volume rm data_vol
+
+# ===== BIND MOUNT VS VOLUME =====
+mkdir -p ~/docker-bind
+echo "Hello from host machine" > ~/docker-bind/data.txt
+docker run -it --name bind_container -v ~/docker-bind:/data ubuntu bash
+# inside:
+cd /data
+ls
+cat data.txt
+echo "Created inside container" > container.txt
+exit
+
+# on host:
+ls ~/docker-bind
+cat ~/docker-bind/container.txt
+docker rm bind_container
+
+docker volume create my_volume
+docker run -it --name volume_test -v my_volume:/data ubuntu bash
+# inside:
+echo "Hello from named volume" > /data/volume.txt
+cat /data/volume.txt
+exit
+docker rm volume_test
+
+# ===== MYSQL WITH PERSISTENT VOLUME =====
+docker pull mysql
+docker volume create mysql_data
+
+docker run -d \
+  --name mysql_container \
+  -e MYSQL_ROOT_PASSWORD=root123 \
+  -e MYSQL_DATABASE=testdb \
+  -v mysql_data:/var/lib/mysql \
+  -p 3306:3306 \
+  mysql
+
+docker ps
+docker logs -f mysql_container
+docker exec -it mysql_container mysql -uroot -p
+# password: root123
+
+USE testdb;
+CREATE TABLE students (id INT PRIMARY KEY, name VARCHAR(100));
+INSERT INTO students VALUES (1, 'Rahul'), (2, 'Amit'), (3, 'John');
+SELECT * FROM students;
+EXIT;
+
+
+
+docker restart mysql_container
+docker exec -it mysql_container mysql -uroot -p
+
+docker restart mysql_container
+docker exec -it mysql_container mysql -uroot -p
+
+USE testdb;
+SELECT * FROM students;
+EXIT;
+
+docker stop mysql_container
+docker rm mysql_container
+docker volume rm mysql_data
+
+# ===== DOCKERFILE: PYTHON =====
+mkdir python-app && cd python-app
+nano app.py
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY app.py .
+CMD ["python", "app.py"]
+
+docker build -t python-app .
+docker images
+docker run --name python-container python-app
+docker ps -a
+docker logs python-container
+docker rm python-container
+
+# ===== DOCKERFILE: JAVA =====
+mkdir java-app && cd java-app
+nano Main.java
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from Java Docker Container");
+    }
+}
+
+FROM eclipse-temurin:21-jdk
+WORKDIR /app
+COPY Main.java .
+RUN javac Main.java
+CMD ["java", "Main"]
+
+docker build -t java-app .
+docker run --name java-container java-app
+docker logs java-container
+docker rm java-container
+
+# ===== DOCKERFILE: NGINX =====
+mkdir nginx-app && cd nginx-app
+nano index.html
+
+<!DOCTYPE html>
+<html>
+<head><title>Docker Nginx Website</title></head>
+<body><h1>Hello from Custom Nginx Docker Image</h1></body>
+</html>
+
+docker build -t custom-nginx .
+docker run -d --name custom-nginx-container -p 8080:80 custom-nginx
+# open http://localhost:8080
+docker logs custom-nginx-container
+docker stop custom-nginx-container
+docker rm custom-nginx-container
+
+# ===== DOCKERFILE: SHELL SCRIPT =====
+mkdir shell-app && cd shell-app
+nano script.sh
+
+#!/bin/bash
+echo "Hello from Docker Shell Script"
+echo "Current system date:"
+date
+
+FROM ubuntu:24.04
+WORKDIR /app
+COPY script.sh .
+RUN chmod +x script.sh
+CMD ["./script.sh"]
+
+# ===== SHARED VOLUME BETWEEN CONTAINERS =====
+docker volume create shared_vol
+docker run -it --name container1 -v shared_vol:/data ubuntu bash
+# inside:
+echo "Shared data from container 1" > /data/shared.txt
+cat /data/shared.txt
+exit
+
+docker run -it --name container2 -v shared_vol:/data ubuntu bash
+# inside:
+cat /data/shared.txt
+echo "Updated by container 2" >> /data/shared.txt
+cat /data/shared.txt
+exit
+
+docker start container1
+docker exec -it container1 cat /data/shared.txt
+
+docker rm -f container1 container2
+docker volume rm shared_vol
+
+# ===== DOCKER COMPOSE =====
+docker compose version
+sudo apt update
+sudo apt install -y docker-compose-plugin
+
+# --- Nginx static site ---
+mkdir website && cd website
+nano index.html
+
+<!DOCTYPE html>
+<html><body><h1>Hello from Docker Compose</h1></body></html>
+
+# compose.yaml
+services:
+  nginx:
+    image: nginx:latest
+    container_name: compose-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    restart: unless-stopped
+
+  docker compose up -d
+docker compose ps
+# open http://localhost:8080
+docker compose logs
+docker compose down
+
+print("Hello from Python Container")
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY app.py .
+CMD ["python", "app.py"]
+
+docker compose up --build
+docker compose logs
+docker compose ps -a
+docker compose down
+
+# --- MySQL with Compose ---
+mkdir mysql-compose && cd mysql-compose
+nano compose.yaml
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: compose-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
+
+  
+docker compose up -d
+docker compose ps
+docker compose logs -f mysql
+docker exec -it compose-mysql mysql -uroot -p
+# password: root123
+
+
+
+
+
+
+
