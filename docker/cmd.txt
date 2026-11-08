@@ -1,0 +1,680 @@
+DOCKER, DOCKER COMPOSE, KUBERNETES & DOCKER SWARM COMMAND REFERENCE
+Platform: Ubuntu Linux
+
+============================================================ DOCKER
+IMAGE AND CONTAINER MANAGEMENT
+============================================================
+
+PULL AND RUN NGINX docker pull nginx docker run -d nginx docker run -d
+–name mynginx nginx docker ps docker stop mynginx docker rm mynginx
+docker ps -a
+
+DOCKER IMAGE COMMANDS docker pull alpine docker images docker image ls
+docker inspect alpine docker rmi alpine docker rmi -f alpine
+
+Docker normally prevents removing an image used by a running container.
+Stop and remove the container first. Force removal can untag an image
+but does not stop the running container. docker ps -a docker stop
+container_name docker rm container_name docker rmi image_name
+
+INTERACTIVE UBUNTU CONTAINER docker pull ubuntu docker run -it –name
+ubuntu_container ubuntu bash
+
+Inside the container: pwd ls ls -la whoami cat /etc/os-release exit
+
+docker ps -a docker start ubuntu_container docker exec -it
+ubuntu_container bash docker stop ubuntu_container docker rm
+ubuntu_container
+
+CONTAINER NAMING AND RENAMING docker run -d –name web_server nginx
+docker ps docker stop web_server docker rename web_server my_server
+docker ps -a docker rm my_server
+
+TAGGING DOCKER IMAGES docker pull nginx docker tag nginx mynginx:v1
+docker tag nginx mynginx:latest docker images docker image inspect
+mynginx:v1 docker image inspect mynginx:latest docker rmi mynginx:v1
+docker images
+
+Removing one tag does not necessarily delete the image data. If another
+tag references the same image, the image remains available.
+
+PUSH DOCKER IMAGE TO DOCKER HUB docker login docker pull nginx docker
+tag nginx YOUR_USERNAME/mynginx:v1 docker push YOUR_USERNAME/mynginx:v1
+docker logout
+
+Verify at: https://hub.docker.com/repositories/YOUR_USERNAME
+
+Replace YOUR_USERNAME with your Docker Hub username.
+
+DOCKER NETWORKING AND PORT MAPPING docker run -d –name nginx_server -p
+8080:80 nginx
+
+Open: http://localhost:8080
+
+docker network ls docker network inspect bridge docker inspect
+nginx_server docker stop nginx_server docker rm nginx_server
+
+Port mapping syntax: -p HOST_PORT:CONTAINER_PORT
+
+Example -p 8080:80 maps Ubuntu host port 8080 to Nginx container port
+80.
+
+============================================================ DOCKER
+VOLUMES AND DATA PERSISTENCE
+============================================================
+
+CREATE AND USE A DOCKER VOLUME docker volume create data_vol docker
+volume ls docker volume inspect data_vol docker run -it –name
+volume_container -v data_vol:/data ubuntu bash
+
+Inside container: cd /data echo “Docker volume persistence test” >
+test.txt cat test.txt exit
+
+docker rm volume_container docker run -it –name new_volume_container -v
+data_vol:/data ubuntu bash
+
+Inside new container: cd /data ls cat test.txt exit
+
+The file remains because the named volume exists independently of the
+container.
+
+docker rm new_volume_container docker volume rm data_vol
+
+BIND MOUNT VS DOCKER VOLUME mkdir -p ~/docker-bind echo “Hello from host
+machine” > ~/docker-bind/data.txt docker run -it –name bind_container -v
+~/docker-bind:/data ubuntu bash
+
+Inside container: cd /data ls cat data.txt echo “Created inside
+container” > container.txt exit
+
+On host: ls ~/docker-bind cat ~/docker-bind/container.txt docker rm
+bind_container
+
+Named volume example: docker volume create my_volume docker run -it
+–name volume_test -v my_volume:/data ubuntu bash
+
+Inside container: echo “Hello from named volume” > /data/volume.txt cat
+/data/volume.txt exit
+
+docker rm volume_test
+
+Differences: - Bind mount uses a specific host directory chosen by the
+user and is useful for development. - Docker volume is managed by Docker
+and is useful for persistent application data. - Both can persist data
+beyond the lifetime of a container.
+
+MYSQL CONTAINER WITH PERSISTENT VOLUME docker pull mysql docker volume
+create mysql_data
+
+docker run -d
+–name mysql_container
+-e MYSQL_ROOT_PASSWORD=root123
+-e MYSQL_DATABASE=testdb
+-v mysql_data:/var/lib/mysql
+-p 3306:3306
+mysql
+
+docker ps docker logs -f mysql_container docker exec -it mysql_container
+mysql -uroot -p
+
+Enter password: root123
+
+SQL: USE testdb;
+
+CREATE TABLE students ( id INT PRIMARY KEY, name VARCHAR(100) );
+
+INSERT INTO students VALUES (1, ‘Rahul’), (2, ‘Amit’), (3, ‘John’);
+
+SELECT * FROM students; EXIT;
+
+Restart and verify: docker restart mysql_container docker exec -it
+mysql_container mysql -uroot -p
+
+SQL: USE testdb; SELECT * FROM students; EXIT;
+
+Cleanup: docker stop mysql_container docker rm mysql_container
+
+Remove data only when no longer needed: docker volume rm mysql_data
+
+============================================================ DOCKERFILE
+AND CUSTOM IMAGES
+============================================================
+
+PYTHON APPLICATION USING DOCKERFILE mkdir python-app cd python-app nano
+app.py
+
+app.py: print(“Hello from Python Docker Container”)
+
+nano Dockerfile
+
+Dockerfile: FROM python:3.12-slim WORKDIR /app COPY app.py . CMD
+[“python”, “app.py”]
+
+Build and run: docker build -t python-app . docker images docker run
+–name python-container python-app docker ps -a docker logs
+python-container docker rm python-container
+
+JAVA APPLICATION USING DOCKERFILE mkdir java-app cd java-app nano
+Main.java
+
+Main.java: public class Main { public static void main(String[] args) {
+System.out.println(“Hello from Java Docker Container”); } }
+
+nano Dockerfile
+
+Dockerfile: FROM eclipse-temurin:21-jdk WORKDIR /app COPY Main.java .
+RUN javac Main.java CMD [“java”, “Main”]
+
+Build and run: docker build -t java-app . docker run –name
+java-container java-app docker logs java-container docker rm
+java-container
+
+NGINX WEB SERVER USING DOCKERFILE mkdir nginx-app cd nginx-app nano
+index.html
+
+index.html: <!DOCTYPE html>
+Docker Nginx Website
+Hello from Custom Nginx Docker Image
+nano Dockerfile
+
+Dockerfile: FROM nginx:latest COPY index.html
+/usr/share/nginx/html/index.html EXPOSE 80
+
+Build, run and verify: docker build -t custom-nginx . docker run -d
+–name custom-nginx-container -p 8080:80 custom-nginx
+
+Open: http://localhost:8080
+
+docker logs custom-nginx-container docker stop custom-nginx-container
+docker rm custom-nginx-container
+
+SHELL SCRIPT EXECUTION USING DOCKERFILE mkdir shell-app cd shell-app
+nano script.sh
+
+script.sh: #!/bin/bash echo “Hello from Docker Shell Script” echo
+“Current system date:” date
+
+nano Dockerfile
+
+Dockerfile: FROM ubuntu:24.04 WORKDIR /app COPY script.sh . RUN chmod +x
+script.sh CMD [“./script.sh”]
+
+Build and run: docker build -t shell-app . docker run –name
+shell-container shell-app docker logs shell-container docker rm
+shell-container
+
+SHARED VOLUME BETWEEN CONTAINERS docker volume create shared_vol docker
+run -it –name container1 -v shared_vol:/data ubuntu bash
+
+Inside container1: echo “Shared data from container 1” >
+/data/shared.txt cat /data/shared.txt exit
+
+docker run -it –name container2 -v shared_vol:/data ubuntu bash
+
+Inside container2: cat /data/shared.txt echo “Updated by container 2” >>
+/data/shared.txt cat /data/shared.txt exit
+
+Verify from first container: docker start container1 docker exec -it
+container1 cat /data/shared.txt
+
+Cleanup: docker rm -f container1 container2 docker volume rm shared_vol
+
+============================================================ DOCKER
+COMPOSE ============================================================
+
+Check Compose: docker compose version
+
+If missing: sudo apt update sudo apt install -y docker-compose-plugin
+
+NGINX STATIC WEBSITE USING DOCKER COMPOSE mkdir website cd website nano
+index.html
+
+index.html: <!DOCTYPE html>
+Hello from Docker Compose
+nano compose.yaml
+
+compose.yaml: services: nginx: image: nginx:latest container_name:
+compose-nginx ports: - “8080:80” volumes: -
+./index.html:/usr/share/nginx/html/index.html:ro restart: unless-stopped
+
+Run and verify: docker compose up -d docker compose ps
+
+Open: http://localhost:8080
+
+docker compose logs docker compose down
+
+PYTHON SCRIPT USING DOCKER COMPOSE mkdir python-compose cd
+python-compose nano app.py
+
+app.py: print(“Hello from Python Container”)
+
+nano Dockerfile
+
+Dockerfile: FROM python:3.12-slim WORKDIR /app COPY app.py . CMD
+[“python”, “app.py”]
+
+nano compose.yaml
+
+compose.yaml: services: python-app: build: . container_name:
+python-compose-container
+
+Run and verify: docker compose up –build docker compose logs docker
+compose ps -a docker compose down
+
+The Python script finishes, so its container exits automatically.
+
+MYSQL WITH PERSISTENT VOLUME USING DOCKER COMPOSE mkdir mysql-compose cd
+mysql-compose nano compose.yaml
+
+compose.yaml: services: mysql: image: mysql:8.4 container_name:
+compose-mysql restart: unless-stopped environment: MYSQL_ROOT_PASSWORD:
+root123 MYSQL_DATABASE: testdb ports: - “3306:3306” volumes: -
+mysql_data:/var/lib/mysql
+
+volumes: mysql_data:
+
+Run and check: docker compose up -d docker compose ps docker compose
+logs -f mysql docker exec -it compose-mysql mysql -uroot -p
+
+Enter password: root123
+
+SQL: USE testdb;
+
+CREATE TABLE test ( id INT PRIMARY KEY, name VARCHAR(100) );
+
+INSERT INTO test VALUES (1, ‘Rahul’), (2, ‘Amit’), (3, ‘John’);
+
+SELECT * FROM test; EXIT;
+
+Restart and verify: docker compose restart mysql docker exec -it
+compose-mysql mysql -uroot -p
+
+SQL: USE testdb; SELECT * FROM test; EXIT;
+
+Stop containers but preserve named volume: docker compose down
+
+Remove containers and volume/data only when no longer needed: docker
+compose down -v
+
+THREE NGINX CONTAINERS SHARING ONE DOCKER VOLUME
+
+Important: If three Nginx containers mount the same volume directly at
+/usr/share/nginx/html and read the same index.html, they cannot each
+show different content. This example uses one shared named volume with a
+separate subdirectory for each container. Each Nginx container copies
+its own HTML file into its web root at startup.
+
+mkdir nginx-three cd nginx-three mkdir -p nginx1 nginx2 nginx3
+
+Create three HTML files: echo “
+Hello from Container 1
+” > nginx1/index.html echo “
+Hello from Container 2
+” > nginx2/index.html echo “
+Hello from Container 3
+” > nginx3/index.html
+
+nano compose.yaml
+
+compose.yaml: services: init: image: alpine:latest volumes: -
+shared-data:/shared - ./nginx1:/source/nginx1:ro -
+./nginx2:/source/nginx2:ro - ./nginx3:/source/nginx3:ro command: - sh -
+-c - | mkdir -p /shared/nginx1 /shared/nginx2 /shared/nginx3 cp
+/source/nginx1/index.html /shared/nginx1/ cp /source/nginx2/index.html
+/shared/nginx2/ cp /source/nginx3/index.html /shared/nginx3/
+
+nginx1: image: nginx:latest container_name: nginx1 depends_on: init:
+condition: service_completed_successfully ports: - “8081:80” volumes: -
+shared-data:/shared:ro command: > sh -c “cp /shared/nginx1/index.html
+/usr/share/nginx/html/index.html && nginx -g ‘daemon off;’”
+
+nginx2: image: nginx:latest container_name: nginx2 depends_on: init:
+condition: service_completed_successfully ports: - “8082:80” volumes: -
+shared-data:/shared:ro command: > sh -c “cp /shared/nginx2/index.html
+/usr/share/nginx/html/index.html && nginx -g ‘daemon off;’”
+
+nginx3: image: nginx:latest container_name: nginx3 depends_on: init:
+condition: service_completed_successfully ports: - “8083:80” volumes: -
+shared-data:/shared:ro command: > sh -c “cp /shared/nginx3/index.html
+/usr/share/nginx/html/index.html && nginx -g ‘daemon off;’”
+
+volumes: shared-data:
+
+Start and verify: docker compose up -d docker compose ps
+
+Open: http://localhost:8081 http://localhost:8082 http://localhost:8083
+
+Logs and cleanup: docker compose logs docker compose down
+
+Remove shared volume too, if no longer needed: docker compose down -v
+
+USEFUL DOCKER COMPOSE COMMANDS docker compose up docker compose up -d
+docker compose up –build docker compose ps docker compose ps -a docker
+compose logs docker compose logs -f docker compose restart docker
+compose stop docker compose start docker compose down docker compose
+down -v docker compose pull docker compose build
+
+============================================================ KUBERNETES
+AND MINIKUBE INSTALLATION
+============================================================
+
+INSTALL MINIKUBE ON UBUNTU
+
+Update Ubuntu: sudo apt update sudo apt upgrade -y
+
+Install utilities: sudo apt install -y curl wget apt-transport-https
+
+Ensure Docker is running: sudo systemctl enable –now docker docker
+–version
+
+Add user to Docker group: sudo usermod -aG docker $USER
+
+Log out and log back in for group change to take effect.
+
+Download latest Minikube release: ARCH=$(dpkg –print-architecture)
+
+case “$ARCH” in amd64) MINIKUBE_ARCH=amd64 ;; arm64) MINIKUBE_ARCH=arm64
+;; *) echo “Unsupported architecture”; exit 1 ;; esac
+
+curl -LO
+“https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-${MINIKUBE_ARCH}”
+
+Install: sudo install “minikube-linux-${MINIKUBE_ARCH}”
+/usr/local/bin/minikube
+
+Remove downloaded binary: rm “minikube-linux-${MINIKUBE_ARCH}”
+
+Verify: minikube version
+
+Start cluster using Docker: minikube start –driver=docker
+
+Check status: minikube status
+
+Check nodes: minikube kubectl – get nodes
+
+Check all pods: minikube kubectl – get pods -A
+
+Cluster information: minikube kubectl – cluster-info
+
+Open dashboard: minikube dashboard
+
+Stop: minikube stop
+
+Start: minikube start
+
+Delete cluster: minikube delete
+
+Useful commands: minikube profile list minikube ip minikube logs
+minikube addons list minikube addons enable dashboard minikube addons
+enable metrics-server minikube status
+
+Official documentation: https://minikube.sigs.k8s.io/docs/start/
+https://kubernetes.io/docs/home/
+
+============================================================ DOCKER
+SWARM ============================================================
+
+INITIALIZE DOCKER SWARM docker –version docker swarm init docker info
+docker node ls
+
+DEPLOY NGINX SERVICE IN DOCKER SWARM docker service create
+–name nginx-service
+–replicas 2
+–publish published=8080,target=80
+nginx
+
+docker service ls docker service ps nginx-service docker service inspect
+nginx-service
+
+Open: http://localhost:8080
+
+View logs: docker service logs nginx-service
+
+DEPLOY PYTHON WORKER SERVICE IN DOCKER SWARM
+
+mkdir swarm-python cd swarm-python nano app.py
+
+app.py: import time
+
+while True: print(“Running in Swarm…”, flush=True) time.sleep(5)
+
+nano Dockerfile
+
+Dockerfile: FROM python:3.12-slim WORKDIR /app COPY app.py . CMD
+[“python”, “-u”, “app.py”]
+
+Build: docker build -t python-swarm:v1 .
+
+Deploy: docker service create
+–name python-service
+–replicas 3
+python-swarm:v1
+
+Check: docker service ls docker service ps python-service docker service
+logs -f python-service
+
+View task containers: docker ps –filter name=python-service
+
+Get container IDs: docker ps -q –filter name=python-service
+
+Inspect a particular container’s logs: docker logs CONTAINER_ID
+
+Replace CONTAINER_ID with an actual ID returned by the previous command.
+
+SCALE DOCKER SWARM SERVICE
+
+Create service with two replicas: docker service create
+–name nginx-service
+–replicas 2
+nginx
+
+Check: docker service ls
+
+Scale to five: docker service scale nginx-service=5
+
+Verify: docker service ls docker service ps nginx-service
+
+Scale back to one: docker service scale nginx-service=1
+
+Verify: docker service ls docker service ps nginx-service
+
+When scaling down from five to one, Swarm stops and removes excess
+tasks; one replica remains.
+
+ROLLING UPDATE IN DOCKER SWARM
+
+Create service with Nginx 1.25: docker service create
+–name nginx-service
+–replicas 3
+–update-parallelism 1
+–update-delay 10s
+nginx:1.25
+
+Check: docker service ls
+
+Update image: docker service update
+–image nginx:latest
+nginx-service
+
+Check update: docker service ps nginx-service docker service inspect
+nginx-service docker service logs nginx-service docker service ls
+
+Rollback: docker service rollback nginx-service
+
+Verify rollback: docker service ps nginx-service docker service inspect
+nginx-service
+
+–update-parallelism 1 updates one task at a time. –update-delay 10s
+waits ten seconds between task updates.
+
+REMOVE DOCKER SWARM SERVICES
+
+List: docker service ls
+
+Remove Nginx: docker service rm nginx-service
+
+Remove Python: docker service rm python-service
+
+Verify: docker service ls
+
+Leave Swarm: docker swarm leave –force
+
+Verify Swarm status: docker info
+
+============================================================ DOCKER
+SWARM - CONCEPTS AND EXPLANATIONS
+============================================================
+
+USAGE OF DOCKER SWARM
+
+Docker Swarm is a container orchestration tool built into Docker. It
+manages multiple Docker containers across multiple machines.
+
+Container orchestration: - Automatically manages containers across
+multiple machines. - Maintains the desired number of container
+replicas. - Restarts failed tasks when possible.
+
+Service deployment: - Deploys applications as services. - Allows users
+to specify the Docker image and number of replicas. - Manages container
+execution across Swarm nodes.
+
+Example: docker service create –name web –replicas 3 nginx
+
+Scaling containers: - Increases or decreases the number of container
+replicas. - Helps handle changes in application workload.
+
+Example: docker service scale web=5
+
+Load balancing: - Distributes incoming requests across service
+replicas. - Uses Docker Swarm’s built-in routing mesh. - Allows services
+to be accessed through published ports.
+
+Rolling updates: - Updates containers gradually without updating every
+replica simultaneously. - Supports update delays and parallelism
+settings. - Allows rollback to a previous service configuration.
+
+Example: docker service update
+–image nginx:latest
+–update-parallelism 1
+–update-delay 10s
+web
+
+High availability: - Maintains multiple replicas of an application. -
+Replaces failed tasks when possible. - Supports manager-node
+availability through Raft consensus when multiple managers are
+configured.
+
+Multi-node container management: - Manages multiple Docker hosts in one
+Swarm cluster. - Supports manager and worker nodes. - Distributes
+services across available nodes.
+
+Useful commands: docker swarm init docker node ls docker service ls
+docker service ps SERVICE_NAME docker service scale SERVICE_NAME=5
+docker swarm leave –force
+
+LIMITATIONS OF DOCKER SWARM
+
+Less powerful than Kubernetes: - Provides fewer advanced orchestration
+capabilities. - Kubernetes supports more complex deployment and
+management requirements.
+
+Smaller ecosystem: - Has fewer third-party integrations and extensions
+compared with Kubernetes. - Offers fewer specialized ecosystem tools.
+
+Limited auto-scaling support: - Does not provide Kubernetes-style native
+Horizontal Pod Autoscaling. - Scaling generally requires manual commands
+or external automation.
+
+Limited networking features: - Provides basic overlay networking and
+service discovery. - Has fewer advanced networking and policy
+capabilities than Kubernetes.
+
+Limited storage management: - Provides basic volume management. - Does
+not offer the same breadth of advanced persistent storage orchestration
+capabilities as Kubernetes.
+
+Less common in large production environments: - Kubernetes is more
+widely adopted for complex enterprise container orchestration. - Swarm
+has a smaller ecosystem and community.
+
+Fewer monitoring and security integrations: - Has fewer specialized
+integrations for monitoring, observability, and security. - Advanced
+requirements may need external tools.
+
+============================================================ GENERAL
+DOCKER COMMANDS - QUICK REVISION
+============================================================
+
+Pull image: docker pull IMAGE
+
+List images: docker images
+
+Remove image: docker rmi IMAGE
+
+Run container: docker run IMAGE
+
+Run in background: docker run -d IMAGE
+
+Run interactively: docker run -it IMAGE bash
+
+List running containers: docker ps
+
+List all containers: docker ps -a
+
+Stop container: docker stop NAME
+
+Start container: docker start NAME
+
+Restart container: docker restart NAME
+
+Remove container: docker rm NAME
+
+Force remove container: docker rm -f NAME
+
+Rename container: docker rename OLD NEW
+
+Execute command inside container: docker exec -it NAME bash
+
+View container logs: docker logs NAME
+
+Inspect container: docker inspect NAME
+
+Create volume: docker volume create NAME
+
+List volumes: docker volume ls
+
+Remove volume: docker volume rm NAME
+
+List networks: docker network ls
+
+Build image: docker build -t NAME .
+
+Tag image: docker tag SOURCE TARGET
+
+Push image: docker push IMAGE
+
+Login: docker login
+
+Logout: docker logout
+
+GENERAL DOCKER COMPOSE COMMANDS
+docker compose up -d 
+docker compose up –build 
+docker compose down docker
+compose down -v 
+docker compose ps
+docker compose logs
+docker compose logs -f 
+docker compose restart 
+docker compose stop 
+docker compose start
+docker compose pull
+docker compose build
+
+GENERAL DOCKER SWARM COMMANDS docker swarm init docker swarm leave
+–force docker node ls docker service create docker service ls docker
+service ps SERVICE_NAME docker service inspect SERVICE_NAME docker
+service logs SERVICE_NAME docker service scale SERVICE_NAME=5 docker
+service update SERVICE_NAME docker service rollback SERVICE_NAME docker
+service rm SERVICE_NAME
+
