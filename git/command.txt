@@ -1,0 +1,328 @@
+# GIT & GITHUB COMMANDS 
+
+## Q1. Create and Initialize Git Repository
+
+### Step 1: Create a new directory
+
+```bash
+mkdir git_lab
+cd git_lab
+```
+
+### Step 2: Initialize Git repository
+
+```bash
+git init
+```
+
+### Step 3: Configure Git username and email (if not configured)
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your-email@example.com"
+```
+
+Check configuration:
+
+```bash
+git config --list
+```
+
+### Step 4: Create info.txt
+
+```bash
+nano info.txt
+```
+
+Add the following content:
+
+```text
+Name: Your Name
+Date: 08-11-2026
+```
+
+Save: `Ctrl + O`, Enter, then `Ctrl + X`.
+
+### Step 5: Check repository status
+
+```bash
+git status
+```
+
+### Step 6: Add file to staging area
+
+```bash
+git add info.txt
+```
+
+### Step 7: Commit the file
+
+```bash
+git commit -m "Initial commit"
+```
+
+### Step 8: Verify commit
+
+```bash
+git log --oneline
+git status
+```
+
+---
+
+## Q2. Connect to GitHub and Push Code
+
+### Step 1: Create a GitHub repository
+
+1. Open https://github.com
+2. Log in to your account.
+3. Click the + icon and select New repository.
+4. Repository name: `git_lab_remote`
+5. Select Public or Private.
+6. Do not initialize with README, .gitignore, or license.
+7. Click Create repository.
+
+### Step 2: Connect local repository to GitHub
+
+Replace YOUR_USERNAME with your GitHub username.
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/git_lab_remote.git
+```
+
+### Step 3: Rename current branch to main
+
+```bash
+git branch -M main
+```
+
+### Step 4: Verify remote connection
+
+```bash
+git remote -v
+```
+
+### Step 5: Push code to GitHub
+
+```bash
+git push -u origin main
+```
+
+Authenticate with GitHub if prompted. HTTPS authentication may require a Personal Access Token instead of your GitHub password.
+
+### Step 6: Verify uploaded file
+
+```bash
+git ls-remote origin
+```
+
+Open your GitHub repository in the browser:
+
+https://github.com/YOUR_USERNAME/git_lab_remote
+
+Check that `info.txt` is visible.
+
+---
+
+## Q3. Clone Repository and Make Changes
+
+### Step 1: Move outside the original repository
+
+```bash
+cd ..
+```
+
+### Step 2: Clone the GitHub repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/git_lab_remote.git
+```
+
+### Step 3: Enter the cloned directory
+
+```bash
+cd git_lab_remote
+```
+
+### Step 4: Create data.txt
+
+```bash
+nano data.txt
+```
+
+Add sample content:
+
+```text
+This is my sample data file.
+Learning Git and GitHub.
+Practicing repository management.
+```
+
+Save and exit.
+
+### Step 5: Check repository status
+
+```bash
+git status
+```
+
+### Step 6: Add data.txt to staging
+
+```bash
+git add data.txt
+```
+
+### Step 7: Commit changes
+
+```bash
+git commit -m "Added data file"
+```
+
+### Step 8: Push changes to GitHub
+
+```bash
+git push origin main
+```
+
+### Step 9: Verify changes
+
+```bash
+git log --oneline
+git status
+```
+
+Open the GitHub repository and verify that `data.txt` is uploaded.
+
+---
+
+## Q4. Branching and Merging
+
+### Step 1: Check current branch
+
+```bash
+git branch
+```
+
+### Step 2: Create a new branch named feature
+
+```bash
+git branch feature
+```
+
+### Step 3: Switch to feature branch
+
+```bash
+git switch feature
+```
+
+Alternative command:
+
+```bash
+git checkout feature
+```
+
+### Step 4: Modify info.txt
+
+```bash
+nano info.txt
+```
+
+Add this new line:
+
+```text
+Feature branch update
+```
+
+Save and exit.
+
+### Step 5: Check status
+
+```bash
+git status
+```
+
+### Step 6: Stage modified file
+
+```bash
+git add info.txt
+```
+
+### Step 7: Commit changes
+
+```bash
+git commit -m "Updated info.txt in feature branch"
+```
+
+### Step 8: Switch back to main branch
+
+```bash
+git switch main
+```
+
+### Step 9: Merge feature branch into main
+
+```bash
+git merge feature
+```
+
+### Step 10: Verify merged changes
+
+```bash
+cat info.txt
+git log --oneline --graph --all
+```
+
+### Step 11: Delete feature branch after successful merge
+
+```bash
+git branch -d feature
+```
+
+### Step 12: Verify branch deletion
+
+```bash
+git branch
+```
+
+Only the main branch should remain locally.
+
+### Step 13: Push merged changes to GitHub
+
+```bash
+git push origin main
+```
+
+### Step 14: Final verification
+
+```bash
+git status
+git log --oneline
+git branch -a
+```
+
+---
+
+# IMPORTANT GIT COMMANDS – QUICK REVISION
+
+| Purpose | Command |
+|---|---|
+| Initialize repository | `git init` |
+| Check status | `git status` |
+| Add one file | `git add filename` |
+| Add all files | `git add .` |
+| Commit changes | `git commit -m "message"` |
+| View commits | `git log` |
+| View short commits | `git log --oneline` |
+| Create branch | `git branch branch_name` |
+| List branches | `git branch` |
+| Switch branch | `git switch branch_name` |
+| Merge branch | `git merge branch_name` |
+| Delete branch | `git branch -d branch_name` |
+| Add remote | `git remote add origin URL` |
+| View remote | `git remote -v` |
+| Clone repository | `git clone URL` |
+| Push code | `git push origin main` |
+| Pull latest changes | `git pull origin main` |
+| Download remote updates | `git fetch origin` |
+| Rename branch | `git branch -M main` |
+| Remove remote | `git remote remove origin` |
