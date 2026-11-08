@@ -288,6 +288,9 @@ Check cluster status:
 
 ``` bash
 minikube status
+echo 'alias kubectl="minikube kubectl --"' >> ~/.bashrc
+source ~/.bashrc
+
 ```
 
 ### 6.3 Use kubectl
